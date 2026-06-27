@@ -1,0 +1,68 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: cmms-postgres
+    environment:
+      POSTGRES_USER: cmmsuser
+      POSTGRES_PASSWORD: cmmspassword
+      POSTGRES_DB: cmmsdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cmmsuser -d cmmsdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cmms-network
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cmms-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://cmmsuser:cmmspassword@postgres:5432/cmmsdb
+      NEXTAUTH_URL: http://localhost
+      NEXTAUTH_SECRET: test-secret-key-change-in-production
+      JWT_SECRET: test-jwt-secret-change-in-production
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./storage:/app/storage
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - cmms-network
+    restart: unless-stopped
+  nginx:
+    image: nginx:alpine
+    container_name: cmms-nginx
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./storage:/app/storage:ro
+      - ./certs:/etc/nginx/certs:ro
+    networks:
+      - cmms-network
+    restart: unless-stopped
+volumes:
+  postgres_data:
+networks:
+  cmms-network:
+    driver: bridge
