@@ -1,0 +1,522 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== AUTH ====================
+model User {
+  id            String     @id @default(cuid())
+  username      String     @unique
+  email         String     @unique
+  name          String
+  password      String
+  avatar        String?
+  department    String?
+  phone         String?
+  role          Role       @relation(fields: [roleId], references: [id])
+  roleId        String
+  signature     String?
+  isActive      Boolean    @default(true)
+  lastLogin     DateTime?
+  passwordChanged DateTime @default(now())
+  
+  accounts      Account[]
+  sessions      Session[]
+  workOrders    WorkOrder[] @relation("assignedTo")
+  workOrdersCreated WorkOrder[] @relation("createdBy")
+  workOrdersCompleted WorkOrder[] @relation("completedBy")
+  checkSheets   CheckSheet[] @relation("createdBy")
+  spareParts    SparePart[] @relation("createdBy")
+  stockTransactions StockTransaction[] @relation("createdBy")
+  auditLogs     AuditLog[] @relation("user")
+  notifications Notification[]
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  @@index([roleId])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model Role {
+  id            String     @id @default(cuid())
+  name          String     @unique
+  description   String?
+  permissions   Permission[]
+  users         User[]
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  @@index([deletedAt])
+}
+
+model Permission {
+  id            String     @id @default(cuid())
+  name          String     @unique
+  description   String?
+  module        String
+  action        String
+  roles         Role[]
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  @@index([module])
+  @@index([deletedAt])
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==================== MACHINE ====================
+model Machine {
+  id            String     @id @default(cuid())
+  code          String     @unique
+  name          String
+  description   String?
+  type          String
+  model         String?
+  serialNumber  String?
+  manufacturer  String?
+  manufacturerDate DateTime?
+  location      String
+  image         String?
+  qrCode        String?
+  barcode       String?
+  manualPdf     String?
+  drawingPdf    String?
+  runningHours  Float      @default(0)
+  status        MachineStatus @default(ACTIVE)
+  isActive      Boolean    @default(true)
+
+  workOrders    WorkOrder[]
+  preventiveMaintenance PreventiveMaintenance[]
+  machineHistory MachineHistory[]
+  checkSheets   CheckSheet[]
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  @@index([code])
+  @@index([status])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+enum MachineStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+  REPAIR
+  IDLE
+  BREAKDOWN
+}
+
+model MachineHistory {
+  id            String     @id @default(cuid())
+  machine       Machine    @relation(fields: [machineId], references: [id])
+  machineId     String
+  type          String
+  description   String
+  duration      Float?
+  cost          Float?
+  startDate     DateTime
+  endDate       DateTime?
+  notes         String?
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  @@index([machineId])
+  @@index([type])
+  @@index([deletedAt])
+}
+
+// ==================== WORK ORDER ====================
+model WorkOrder {
+  id            String     @id @default(cuid())
+  code          String     @unique @default(cuid())
+  title         String
+  description   String?
+  machine       Machine    @relation(fields: [machineId], references: [id])
+  machineId     String
+  type          WorkOrderType
+  priority      Priority   @default(MEDIUM)
+  status        WorkOrderStatus @default(OPEN)
+  
+  assignedTo    User?      @relation("assignedTo", fields: [assignedToId], references: [id])
+  assignedToId  String?
+  createdBy     User       @relation("createdBy", fields: [createdById], references: [id])
+  createdById   String
+  completedBy   User?      @relation("completedBy", fields: [completedById], references: [id])
+  completedById String?
+
+  plannedDate   DateTime?
+  startDate     DateTime?
+  endDate       DateTime?
+  estimatedHours Float?
+  actualHours   Float?
+
+  photoBeforePath String?
+  photoAfterPath String?
+  comments      String?
+  signature     String?
+  gpsLocation   String?
+  
+  spareParts    WorkOrderSparePart[]
+  history       WorkOrderHistory[]
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  @@index([machineId])
+  @@index([status])
+  @@index([priority])
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([deletedAt])
+}
+
+enum WorkOrderType {
+  CORRECTIVE
+  PREVENTIVE
+  PREDICTIVE
+  INSPECTION
+  EMERGENCY
+}
+
+enum WorkOrderStatus {
+  OPEN
+  ASSIGNED
+  ACCEPTED
+  WORKING
+  WAITING_SPARE_PART
+  COMPLETED
+  CLOSED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+  CRITICAL
+}
+
+model WorkOrderHistory {
+  id            String     @id @default(cuid())
+  workOrder     WorkOrder  @relation(fields: [workOrderId], references: [id])
+  workOrderId   String
+  status        WorkOrderStatus
+  comment       String?
+  timestamp     DateTime   @default(now())
+
+  @@index([workOrderId])
+}
+
+model WorkOrderSparePart {
+  id            String     @id @default(cuid())
+  workOrder     WorkOrder  @relation(fields: [workOrderId], references: [id])
+  workOrderId   String
+  sparePart     SparePart  @relation(fields: [sparePartId], references: [id])
+  sparePartId   String
+  quantity      Int
+  issuedDate    DateTime?
+  returnedDate  DateTime?
+
+  @@unique([workOrderId, sparePartId])
+  @@index([workOrderId])
+  @@index([sparePartId])
+}
+
+// ==================== PREVENTIVE MAINTENANCE ====================
+model PreventiveMaintenance {
+  id            String     @id @default(cuid())
+  code          String     @unique @default(cuid())
+  machine       Machine    @relation(fields: [machineId], references: [id])
+  machineId     String
+  name          String
+  description   String?
+  frequency     PMFrequency
+  interval      Int
+  runningHourInterval Int?
+  lastExecuted  DateTime?
+  nextDue       DateTime?
+  
+  checkItems    CheckItem[]
+  workOrders    PMWorkOrder[]
+  
+  isActive      Boolean    @default(true)
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  @@index([machineId])
+  @@index([frequency])
+  @@index([nextDue])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+enum PMFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  RUN_HOUR
+}
+
+model PMWorkOrder {
+  id            String     @id @default(cuid())
+  preventiveMaintenance PreventiveMaintenance @relation(fields: [pmId], references: [id])
+  pmId          String
+  workOrder     WorkOrder  @relation(fields: [workOrderId], references: [id])
+  workOrderId   String
+  executedDate  DateTime
+  completedDate DateTime?
+
+  @@unique([pmId, executedDate])
+  @@index([pmId])
+  @@index([workOrderId])
+}
+
+// ==================== CHECK SHEET ====================
+model CheckSheet {
+  id            String     @id @default(cuid())
+  code          String     @unique @default(cuid())
+  machine       Machine    @relation(fields: [machineId], references: [id])
+  machineId     String
+  name          String
+  description   String?
+  formData      Json
+  responses     CheckSheetResponse[]
+  
+  isActive      Boolean    @default(true)
+  createdBy     User       @relation("createdBy", fields: [createdById], references: [id])
+  createdById   String
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  @@index([machineId])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model CheckSheetResponse {
+  id            String     @id @default(cuid())
+  checkSheet    CheckSheet @relation(fields: [checkSheetId], references: [id])
+  checkSheetId  String
+  responseData  Json
+  photoPaths    String[]
+  signature     String?
+  notes         String?
+  submittedDate DateTime   @default(now())
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  @@index([checkSheetId])
+  @@index([submittedDate])
+  @@index([deletedAt])
+}
+
+model CheckItem {
+  id            String     @id @default(cuid())
+  preventiveMaintenance PreventiveMaintenance @relation(fields: [pmId], references: [id])
+  pmId          String
+  order         Int
+  itemType      String
+  label         String
+  required      Boolean    @default(false)
+  config        Json?
+
+  @@index([pmId])
+}
+
+// ==================== SPARE PARTS ====================
+model SparePart {
+  id            String     @id @default(cuid())
+  code          String     @unique
+  name          String
+  description   String?
+  category      String
+  unit          String
+  qrCode        String?
+  barcode       String?
+  image         String?
+  
+  currentStock  Int        @default(0)
+  minimumStock  Int        @default(0)
+  reorderPoint  Int        @default(0)
+  reorderQuantity Int      @default(0)
+  unitPrice     Float      @default(0)
+  
+  supplier      String?
+  lastPurchase  DateTime?
+  leadTime      Int?
+  
+  stockTransactions StockTransaction[]
+  workOrders    WorkOrderSparePart[]
+  
+  isActive      Boolean    @default(true)
+  createdBy     User       @relation("createdBy", fields: [createdById], references: [id])
+  createdById   String
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  @@index([code])
+  @@index([category])
+  @@index([currentStock])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model StockTransaction {
+  id            String     @id @default(cuid())
+  sparePart     SparePart  @relation(fields: [sparePartId], references: [id])
+  sparePartId   String
+  type          StockType
+  quantity      Int
+  reference     String?
+  notes         String?
+  createdBy     User       @relation("createdBy", fields: [createdById], references: [id])
+  createdById   String
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  @@index([sparePartId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+enum StockType {
+  RECEIVE
+  ISSUE
+  TRANSFER
+  ADJUSTMENT
+  RETURN
+  LOSS
+}
+
+// ==================== AUDIT LOG ====================
+model AuditLog {
+  id            String     @id @default(cuid())
+  user          User       @relation("user", fields: [userId], references: [id])
+  userId        String
+  action        String
+  module        String
+  entityId      String?
+  entityType    String?
+  oldValue      Json?
+  newValue      Json?
+  ipAddress     String?
+  userAgent     String?
+
+  createdAt     DateTime   @default(now())
+
+  @@index([userId])
+  @@index([module])
+  @@index([entityId])
+  @@index([createdAt])
+}
+
+// ==================== SETTINGS ====================
+model Setting {
+  id            String     @id @default(cuid())
+  key           String     @unique
+  value         String
+  type          String
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([key])
+}
+
+// ==================== NOTIFICATIONS ====================
+model Notification {
+  id            String     @id @default(cuid())
+  user          User       @relation(fields: [userId], references: [id])
+  userId        String
+  title         String
+  message       String
+  type          NotificationType
+  entityId      String?
+  entityType    String?
+  isRead        Boolean    @default(false)
+  readAt        DateTime?
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  WORK_ORDER
+  PM_DUE
+  LOW_STOCK
+  MAINTENANCE
+  ALERT
+  SYSTEM
+}
