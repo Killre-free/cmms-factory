@@ -1,11 +1,19 @@
+// @ts-check
+const withNextIntl = require('next-intl/plugin')(
+  './lib/i18n.ts'
+);
+
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  compiler: {removeConsole: process.env.NODE_ENV === 'production'},
-  images: {unoptimized: true, domains: ['localhost', 'cmms.local']},
-  staticPageGenerationTimeout: 1000,
-  poweredByHeader: false,
-  compress: true,
-  productionBrowserSourceMaps: false
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client'],
+  },
+  env: {
+    NEXT_PUBLIC_APP_NAME: 'CMMS Factory',
+    NEXT_PUBLIC_APP_VERSION: '1.0.0',
+  },
 };
-module.exports = nextConfig;
+
+module.exports = withNextIntl(nextConfig);

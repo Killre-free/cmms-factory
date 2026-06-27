@@ -1,0 +1,40 @@
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+export const ROLES = {
+  ADMIN: 'ADMIN',
+  MANAGER: 'MANAGER',
+  TECHNICIAN: 'TECHNICIAN',
+  OPERATOR: 'OPERATOR',
+};
+
+export const MACHINE_STATUS = {
+  OPERATIONAL: 'OPERATIONAL',
+  IDLE: 'IDLE',
+  MAINTENANCE: 'MAINTENANCE',
+  BROKEN: 'BROKEN',
+};
+
+export const WORK_ORDER_STATUS = {
+  PENDING: 'PENDING',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+};
+
+export const WORK_ORDER_PRIORITY = {
+  LOW: 'LOW',
+  MEDIUM: 'MEDIUM',
+  HIGH: 'HIGH',
+  URGENT: 'URGENT',
+};
+
+export const SPARE_PART_CATEGORIES = [
+  'FILTERS',
+  'TOOLS',
+  'PNEUMATICS',
+  'HYDRAULICS',
+  'BEARINGS',
+  'BELTS',
+  'SEALS',
+  'OTHER',
+];

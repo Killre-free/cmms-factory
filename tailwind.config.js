@@ -6,10 +6,11 @@ module.exports = {
   ],
   theme: {
     extend: {
-      fontFamily: {
-        sans: ['system-ui', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+      colors: {
+        primary: '#2563eb',
+        secondary: '#64748b',
       },
     },
   },
   plugins: [],
-}
+};

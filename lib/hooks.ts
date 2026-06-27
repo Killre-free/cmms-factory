@@ -1,54 +1,42 @@
-"use client";
+import { useState, useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: "/api",
-});
-
-// Machines
 export function useMachines() {
   return useQuery({
-    queryKey: ["machines"],
+    queryKey: ['machines'],
     queryFn: async () => {
-      const { data } = await api.get("/machines");
-      return data;
+      const response = await fetch('/api/machines');
+      if (!response.ok) throw new Error('Failed to fetch machines');
+      return response.json();
     },
-  });
-}
-
-export function useMachine(id: string) {
-  return useQuery({
-    queryKey: ["machines", id],
-    queryFn: async () => {
-      const { data } = await api.get(`/machines/${id}`);
-      return data;
-    },
-    enabled: !!id,
   });
 }
 
 export function useCreateMachine() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (machine: any) => {
-      const { data } = await api.post("/machines", machine);
-      return data;
+    mutationFn: async (data: any) => {
+      const response = await fetch('/api/machines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create machine');
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["machines"] });
+      queryClient.invalidateQueries({ queryKey: ['machines'] });
     },
   });
 }
 
-// Work Orders
 export function useWorkOrders() {
   return useQuery({
-    queryKey: ["work-orders"],
+    queryKey: ['workOrders'],
     queryFn: async () => {
-      const { data } = await api.get("/work-orders");
-      return data;
+      const response = await fetch('/api/work-orders');
+      if (!response.ok) throw new Error('Failed to fetch work orders');
+      return response.json();
     },
   });
 }
@@ -56,23 +44,28 @@ export function useWorkOrders() {
 export function useCreateWorkOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (workOrder: any) => {
-      const { data } = await api.post("/work-orders", workOrder);
-      return data;
+    mutationFn: async (data: any) => {
+      const response = await fetch('/api/work-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create work order');
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["work-orders"] });
+      queryClient.invalidateQueries({ queryKey: ['workOrders'] });
     },
   });
 }
 
-// Spare Parts
 export function useSpareParts() {
   return useQuery({
-    queryKey: ["spare-parts"],
+    queryKey: ['spareParts'],
     queryFn: async () => {
-      const { data } = await api.get("/spare-parts");
-      return data;
+      const response = await fetch('/api/spare-parts');
+      if (!response.ok) throw new Error('Failed to fetch spare parts');
+      return response.json();
     },
   });
 }
@@ -80,23 +73,28 @@ export function useSpareParts() {
 export function useCreateSparePart() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (sparePart: any) => {
-      const { data } = await api.post("/spare-parts", sparePart);
-      return data;
+    mutationFn: async (data: any) => {
+      const response = await fetch('/api/spare-parts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create spare part');
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["spare-parts"] });
+      queryClient.invalidateQueries({ queryKey: ['spareParts'] });
     },
   });
 }
 
-// Dashboard
 export function useDashboardStats() {
   return useQuery({
-    queryKey: ["dashboard-stats"],
+    queryKey: ['dashboardStats'],
     queryFn: async () => {
-      const { data } = await api.get("/dashboard/stats");
-      return data;
+      const response = await fetch('/api/dashboard/stats');
+      if (!response.ok) throw new Error('Failed to fetch dashboard stats');
+      return response.json();
     },
   });
 }
